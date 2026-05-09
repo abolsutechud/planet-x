@@ -1,1 +1,3 @@
-
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/V5_fixed.html" }]
+}
