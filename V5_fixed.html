@@ -37,8 +37,9 @@ const db={
     if(!r.ok){const t=await r.text();throw new Error(`INSERT ${table}: ${r.status} ${t}`);}
     return r.json();
   },
-  async upsert(table,body){
-    const r=await fetch(`${SUPA_URL}/rest/v1/${table}`,{method:"POST",headers:{...H,"Prefer":"resolution=merge-duplicates,return=representation"},body:JSON.stringify(body)});
+  async upsert(table,body,onConflict){
+    const url=onConflict?`${SUPA_URL}/rest/v1/${table}?on_conflict=${encodeURIComponent(onConflict)}`:`${SUPA_URL}/rest/v1/${table}`;
+    const r=await fetch(url,{method:"POST",headers:{...H,"Prefer":"resolution=merge-duplicates,return=representation"},body:JSON.stringify(body)});
     if(!r.ok){const t=await r.text();throw new Error(`UPSERT ${table}: ${r.status} ${t}`);}
     return r.json();
   },
@@ -1112,7 +1113,7 @@ function App(){
         const[existing]=await db.get("holdings",`?team_id=eq.${teamId}&commodity_id=eq.${commodityId}`);
         const curQty=existing?.quantity||0;
         const newQty=type==="buy"?curQty+qty:Math.max(0,curQty-qty);
-        await db.upsert("holdings",{team_id:teamId,commodity_id:commodityId,quantity:newQty});
+        await db.upsert("holdings",{team_id:teamId,commodity_id:commodityId,quantity:newQty},"team_id,commodity_id");
       }
 
       // 5. Update local state
