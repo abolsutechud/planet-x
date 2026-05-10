@@ -145,18 +145,49 @@ function PinLogin({title,sub,icon,correctPin,onSuccess,onBack}){
 // ── Team Login ─────────────────────────────────────────────────
 function TeamLogin({teams,onSelect,onBack}){
   const[sel,setSel]=useState("");
+  const[step,setStep]=useState("select"); // "select" | "pin"
+  const[pinVal,setPinVal]=useState("");
+  const[pinErr,setPinErr]=useState("");
+  const[selTeam,setSelTeam]=useState(null);
+  function proceedToPin(){
+    if(!sel)return;
+    const found=teams.find(t=>String(t.id)===String(sel));
+    if(!found)return;
+    setSelTeam(found);
+    setStep("pin");
+  }
+  function attemptPin(){
+    if(!selTeam)return;
+    const correctPin=(selTeam.pin!=null&&selTeam.pin!=="")?(String(selTeam.pin).trim()):"0000";
+    const entered=pinVal.trim();
+    if(entered===correctPin){onSelect(String(sel));}
+    else{setPinErr("Incorrect PIN — try again");setPinVal("");}
+  }
   return(
     <div style={{background:"radial-gradient(ellipse at 50% 30%,#0d1f0d,#0a0a0f)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <div style={{background:"#111118",border:"1px solid #166534",borderRadius:20,padding:"3rem 2.5rem",width:360,textAlign:"center",boxShadow:"0 0 40px #22c55e18"}}>
+      <div style={{background:"#111118",border:"1px solid #166534",borderRadius:20,padding:"3rem 2.5rem",width:380,textAlign:"center",boxShadow:"0 0 40px #22c55e18"}}>
         <div style={{fontSize:44,marginBottom:10}}>🚀</div>
         <h2 style={{color:"#86efac",margin:"0 0 4px",letterSpacing:2,fontSize:20}}>TEAM LOGIN</h2>
-        <p style={{color:"#475569",fontSize:12,margin:"0 0 2rem"}}>SELECT YOUR TEAM</p>
-        <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"12px",background:"#0f172a",border:"1px solid #1e293b",borderRadius:10,color:sel?"#e2e8f0":"#475569",fontFamily:"monospace",fontSize:14,marginBottom:16}}>
-          <option value="">— Choose your team —</option>
-          {teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-        <Btn onClick={()=>sel&&onSelect(sel)} disabled={!sel} color="#14532d" border="#22c55e" textColor="#86efac" style={{width:"100%",padding:"12px",fontSize:15}}>ENTER DASHBOARD</Btn>
-        <button onClick={onBack} style={{background:"none",border:"none",color:"#475569",cursor:"pointer",fontSize:12,marginTop:16,fontFamily:"monospace"}}>← Back</button>
+        {step==="select"?(
+          <>
+            <p style={{color:"#475569",fontSize:12,margin:"0 0 2rem"}}>SELECT YOUR TEAM</p>
+            <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"12px",background:"#0f172a",border:"1px solid #1e293b",borderRadius:10,color:sel?"#e2e8f0":"#475569",fontFamily:"monospace",fontSize:14,marginBottom:16}}>
+              <option value="">— Choose your team —</option>
+              {teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <Btn onClick={proceedToPin} disabled={!sel} color="#14532d" border="#22c55e" textColor="#86efac" style={{width:"100%",padding:"12px",fontSize:15}}>NEXT →</Btn>
+          </>
+        ):(
+          <>
+            <p style={{color:"#475569",fontSize:12,margin:"0 0 6px"}}>ENTER TEAM PIN</p>
+            <p style={{color:"#86efac",fontSize:14,fontWeight:700,margin:"0 0 1.5rem"}}>{selTeam?.name}</p>
+            <input type="password" value={pinVal} onChange={e=>setPinVal(e.target.value)} onKeyDown={e=>e.key==="Enter"&&attemptPin()} placeholder="Team PIN" style={{width:"100%",padding:"12px",background:"#0f172a",border:"1px solid #1e293b",borderRadius:10,color:"#e2e8f0",fontFamily:"monospace",fontSize:20,textAlign:"center",letterSpacing:8,marginBottom:10,outline:"none"}}/>
+            {pinErr&&<p style={{color:"#ef4444",fontSize:12,margin:"0 0 8px"}}>{pinErr}</p>}
+            <Btn onClick={attemptPin} color="#14532d" border="#22c55e" textColor="#86efac" style={{width:"100%",padding:"12px",fontSize:15}}>ENTER DASHBOARD</Btn>
+            <button onClick={()=>{setStep("select");setPinVal("");setPinErr("");}} style={{background:"none",border:"none",color:"#475569",cursor:"pointer",fontSize:12,marginTop:12,fontFamily:"monospace"}}>← Back</button>
+          </>
+        )}
+        {step==="select"&&<button onClick={onBack} style={{background:"none",border:"none",color:"#475569",cursor:"pointer",fontSize:12,marginTop:16,fontFamily:"monospace"}}>← Back</button>}
       </div>
     </div>
   );
@@ -327,21 +358,21 @@ function DisplayScreen({commodities,sorted,round,activeScenario,tradingOpen,onBa
           </div>
         </div>
 
-        {/* LEADERBOARD — 3-column grid */}
+        {/* LEADERBOARD — square card grid */}
         <div style={{flex:1}}>
-          <p style={{color:"#334155",fontSize:10,letterSpacing:3,margin:"0 0 10px",textTransform:"uppercase"}}>Leaderboard</p>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+          <p style={{color:"#334155",fontSize:10,letterSpacing:3,margin:"0 0 10px",textTransform:"uppercase"}}>Leaderboard <span style={{color:"#1e293b",marginLeft:8}}>RANKS</span></p>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,alignContent:"start"}}>
             {sorted.map((t,i)=>{
               const nw=netWorth(t,commodities);
               const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
               return(
-                <div key={t.id} style={{background:"#0f172a",borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",gap:10,border:i<3?`1px solid ${t.color}44`:"1px solid #1e293b11",boxShadow:i<3?`0 0 12px ${t.color}18`:"none"}}>
-                  <span style={{fontSize:medal?18:12,width:26,textAlign:"center",flexShrink:0,color:medal?"inherit":"#334155",fontWeight:700}}>{medal||`${i+1}.`}</span>
-                  <Avatar name={t.name} color={t.color} size={28}/>
-                  <div style={{flex:1,minWidth:0}}>
-                    <p style={{margin:0,fontSize:12,color:"#e2e8f0",fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</p>
-                    <p style={{margin:0,fontSize:11,color:"#a78bfa"}}>🪙 {nw.toLocaleString()}</p>
+                <div key={t.id} style={{background:"#0f172a",borderRadius:10,padding:"12px 10px",display:"flex",flexDirection:"column",alignItems:"center",gap:6,border:i<3?`1px solid ${t.color}55`:"1px solid #1e293b44",boxShadow:i<3?`0 0 14px ${t.color}22`:"none",textAlign:"center",minHeight:100}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",marginBottom:2}}>
+                    <span style={{fontSize:medal?18:13,color:medal?"inherit":"#64748b",fontWeight:700,lineHeight:1}}>{medal||`${i+1}`}</span>
+                    <Avatar name={t.name} color={t.color} size={30}/>
                   </div>
+                  <p style={{margin:0,fontSize:13,color:"#e2e8f0",fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",width:"100%",textAlign:"center"}}>{t.name}</p>
+                  <p style={{margin:0,fontSize:12,color:"#a78bfa",fontWeight:600}}>🪙 {nw.toLocaleString()}</p>
                 </div>
               );
             })}
@@ -409,7 +440,7 @@ function AdminPortal(props){
           {activePage==="teams"&&<PageTeams {...props}/>}
           {activePage==="leaderboard"&&<PageLeaderboard {...props}/>}
           {activePage==="audit"&&<PageAudit {...props}/>}
-          {activePage==="gamesettings"&&<PageGameSettings {...props}/>}
+          {activePage==="gamesettings"&&<PageGameSettings {...props} teams={props.teams} setTeams={props.setTeams} commodities={props.commodities}/>}
         </div>
       </div>
     </div>
@@ -817,12 +848,43 @@ function PageAudit({auditLog}){
 }
 
 function PageDanger({resetGame,adminPin,setAdminPin,addAudit}){return null;}
-function PageGameSettings({resetGame,adminPin,setAdminPin,operatorPin,setOperatorPin,displayPin,setDisplayPin,initialBalance,setInitialBalance,addAudit}){
+function PageGameSettings({resetGame,adminPin,setAdminPin,operatorPin,setOperatorPin,displayPin,setDisplayPin,initialBalance,setInitialBalance,addAudit,teams,setTeams,commodities}){
+  const[miniTab,setMiniTab]=useState("teams");
+  const miniTabs=[{id:"teams",label:"👥 Teams"},{id:"pins",label:"🔑 PINs"},{id:"reset",label:"⚠ Reset Game"}];
+
+  // ── Teams sub-tab state ──
+  const[newName,setNewName]=useState("");
+  const[editId,setEditId]=useState(null);
+  const[editName,setEditName]=useState("");
+  const[editPin,setEditPin]=useState("");
+  const[teamMsg,setTeamMsg]=useState("");
+
+  async function addTeam(){
+    if(!newName.trim())return;
+    const nc={name:newName.trim(),color:COLORS[teams.length%COLORS.length],cash:initialBalance||3000,pin:"0000"};
+    const rows=await db.insert("teams",[nc]);
+    const inserted=rows[0];
+    const newTeam={...inserted,holdings:Object.fromEntries(commodities.map(c=>[c.id,0])),transactions:[]};
+    for(const c of commodities){await db.insert("holdings",[{team_id:inserted.id,commodity_id:c.id,quantity:0}]);}
+    setTeams(t=>[...t,newTeam]);addAudit(`Team added: ${newName}`);setNewName("");setTeamMsg(`✅ ${newName} added`);setTimeout(()=>setTeamMsg(""),2500);
+  }
+  async function delTeam(id){
+    await db.del("teams",{id});
+    setTeams(t=>t.filter(x=>x.id!==id));if(editId===id)setEditId(null);addAudit("Team removed");
+  }
+  function startEdit(t){setEditId(t.id);setEditName(t.name);setEditPin(t.pin||"0000");}
+  async function saveEdit(){
+    if(!editName.trim()||!editPin.trim()){return;}
+    await db.patch("teams",{id:editId},{name:editName.trim(),pin:editPin.trim()});
+    setTeams(t=>t.map(x=>x.id===editId?{...x,name:editName.trim(),pin:editPin.trim()}:x));
+    addAudit(`Team updated: ${editName}`);setTeamMsg("✅ Saved");setEditId(null);setTimeout(()=>setTeamMsg(""),2500);
+  }
+
+  // ── PINs sub-tab state ──
   const[adminPinVal,setAdminPinVal]=useState("");const[adminMsg,setAdminMsg]=useState("");
   const[opPinVal,setOpPinVal]=useState("");const[opMsg,setOpMsg]=useState("");
   const[dispPinVal,setDispPinVal]=useState("");const[dispMsg,setDispMsg]=useState("");
   const[balVal,setBalVal]=useState(String(initialBalance));const[balMsg,setBalMsg]=useState("");
-  const[resetConfirm,setResetConfirm]=useState(false);const[resetInput,setResetInput]=useState("");
   async function saveAdminPin(){
     if(adminPinVal.length<3){setAdminMsg("Min 3 characters");return;}
     await db.patch("settings",{key:"admin_pin"},{value:adminPinVal});
@@ -844,60 +906,145 @@ function PageGameSettings({resetGame,adminPin,setAdminPin,operatorPin,setOperato
     await db.upsert("settings",{key:"initial_balance",value:String(n)},"key");
     setInitialBalance(n);addAudit(`Initial balance set to 🪙${n.toLocaleString()}`);setBalMsg("✅ Saved");setTimeout(()=>setBalMsg(""),2500);
   }
+
+  // ── Reset sub-tab state ──
+  const[resetConfirm,setResetConfirm]=useState(false);const[resetInput,setResetInput]=useState("");
   function handleReset(){
     if(resetInput!=="RESET"){return;}
     setResetConfirm(false);setResetInput("");resetGame();
   }
+
   return(
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.5rem"}}>
-      <div style={{display:"grid",gap:"1rem"}}>
-        <Card>
-          <SectionLabel>Super Admin PIN</SectionLabel>
-          <Input type="password" value={adminPinVal} onChange={e=>setAdminPinVal(e.target.value)} placeholder="New admin PIN" style={{width:"100%",marginBottom:10,boxSizing:"border-box"}}/>
-          {adminMsg&&<p style={{fontSize:12,color:adminMsg.startsWith("✅")?"#86efac":"#fca5a5",margin:"0 0 8px"}}>{adminMsg}</p>}
-          <Btn onClick={saveAdminPin} color="#14532d" border="#22c55e" textColor="#86efac">Update PIN</Btn>
-        </Card>
-        <Card>
-          <SectionLabel>Operator PIN</SectionLabel>
-          <p style={{color:"#64748b",fontSize:13,margin:"0 0 12px"}}>Shared PIN for all operator station logins.</p>
-          <Input type="password" value={opPinVal} onChange={e=>setOpPinVal(e.target.value)} placeholder="New operator PIN" style={{width:"100%",marginBottom:10,boxSizing:"border-box"}}/>
-          {opMsg&&<p style={{fontSize:12,color:opMsg.startsWith("✅")?"#86efac":"#fca5a5",margin:"0 0 8px"}}>{opMsg}</p>}
-          <Btn onClick={saveOpPin} color="#14532d" border="#22c55e" textColor="#86efac">Update PIN</Btn>
-        </Card>
-        <Card>
-          <SectionLabel>Display PIN</SectionLabel>
-          <p style={{color:"#64748b",fontSize:13,margin:"0 0 12px"}}>PIN to access the 📺 display/projector screen.</p>
-          <Input type="password" value={dispPinVal} onChange={e=>setDispPinVal(e.target.value)} placeholder="New display PIN" style={{width:"100%",marginBottom:10,boxSizing:"border-box"}}/>
-          {dispMsg&&<p style={{fontSize:12,color:dispMsg.startsWith("✅")?"#86efac":"#fca5a5",margin:"0 0 8px"}}>{dispMsg}</p>}
-          <Btn onClick={saveDispPin} color="#14532d" border="#22c55e" textColor="#86efac">Update PIN</Btn>
-        </Card>
-        <Card>
-          <SectionLabel>Initial Team Balance</SectionLabel>
-          <p style={{color:"#64748b",fontSize:13,margin:"0 0 12px"}}>Cash each team starts with (used on reset and when adding new teams).</p>
-          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10}}>
-            <span style={{color:"#64748b",fontSize:16}}>🪙</span>
-            <Input type="number" value={balVal} onChange={e=>setBalVal(e.target.value)} style={{width:120,textAlign:"center"}}/>
-          </div>
-          {balMsg&&<p style={{fontSize:12,color:balMsg.startsWith("✅")?"#86efac":"#fca5a5",margin:"0 0 8px"}}>{balMsg}</p>}
-          <Btn onClick={saveBalance} color="#14532d" border="#22c55e" textColor="#86efac">Save Balance</Btn>
-        </Card>
+    <div>
+      {/* Mini tab bar */}
+      <div style={{display:"flex",gap:4,marginBottom:"1.5rem",background:"#0d0d14",borderRadius:10,padding:4,border:"1px solid #1e293b",width:"fit-content"}}>
+        {miniTabs.map(t=>(
+          <button key={t.id} onClick={()=>setMiniTab(t.id)} style={{padding:"8px 18px",borderRadius:7,background:miniTab===t.id?"#1e1b4b":"transparent",border:miniTab===t.id?"1px solid #3730a3":"1px solid transparent",color:miniTab===t.id?"#c4b5fd":"#475569",cursor:"pointer",fontFamily:"monospace",fontSize:13,fontWeight:miniTab===t.id?700:400,whiteSpace:"nowrap"}}>
+            {t.label}
+          </button>
+        ))}
       </div>
-      <Card style={{border:"1px solid #991b1b",alignSelf:"start"}}>
-        <SectionLabel>Reset Game</SectionLabel>
-        <p style={{color:"#64748b",fontSize:13,margin:"0 0 16px"}}>Resets all teams to initial balance, clears all holdings, transactions, and round history. Commodity prices return to base. This is irreversible.</p>
-        {!resetConfirm?(
-          <Btn onClick={()=>setResetConfirm(true)} color="#450a0a" border="#dc2626" textColor="#fca5a5" style={{width:"100%",padding:"10px"}}>⚠ Reset Entire Game</Btn>
-        ):(
-          <div>
-            <p style={{color:"#fca5a5",fontSize:13,margin:"0 0 10px",fontWeight:700}}>Type <span style={{color:"#ef4444",letterSpacing:2}}>RESET</span> to confirm:</p>
-            <Input value={resetInput} onChange={e=>setResetInput(e.target.value)} placeholder="Type RESET" style={{width:"100%",marginBottom:10,boxSizing:"border-box",border:"1px solid #991b1b",textAlign:"center",letterSpacing:3,textTransform:"uppercase"}}/>
-            <div style={{display:"flex",gap:6}}>
-              <Btn onClick={handleReset} disabled={resetInput!=="RESET"} color="#450a0a" border="#dc2626" textColor="#fca5a5" style={{flex:1,padding:"9px"}}>⚠ Confirm Reset</Btn>
-              <Btn onClick={()=>{setResetConfirm(false);setResetInput("");}} color="#1e293b" border="#334155" style={{flex:1,padding:"9px"}}>Cancel</Btn>
+
+      {/* ── TEAMS TAB ── */}
+      {miniTab==="teams"&&(
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.5rem"}}>
+          <Card>
+            <SectionLabel>All Teams</SectionLabel>
+            <div style={{display:"flex",gap:6,marginBottom:14}}>
+              <Input value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addTeam()} placeholder="New team name" style={{flex:1}}/>
+              <Btn onClick={addTeam} color="#14532d" border="#22c55e" textColor="#86efac">Add</Btn>
             </div>
+            {teamMsg&&<p style={{fontSize:12,color:teamMsg.startsWith("✅")?"#86efac":"#fca5a5",margin:"0 0 10px"}}>{teamMsg}</p>}
+            <div style={{maxHeight:460,overflowY:"auto",display:"grid",gap:5}}>
+              {teams.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(t=>(
+                <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 10px",borderRadius:8,background:editId===t.id?"#1e1b4b":"#0f172a",border:editId===t.id?"1px solid #3730a3":"1px solid #1e293b"}}>
+                  <Avatar name={t.name} color={t.color} size={28}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <p style={{margin:0,fontSize:13,color:"#e2e8f0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</p>
+                    <p style={{margin:0,fontSize:11,color:"#475569"}}>PIN: {t.pin||"0000"}</p>
+                  </div>
+                  <button onClick={()=>editId===t.id?setEditId(null):startEdit(t)} style={{background:"#172554",border:"1px solid #1d4ed8",borderRadius:5,color:"#93c5fd",cursor:"pointer",fontSize:11,padding:"3px 8px",fontFamily:"monospace"}}>Edit</button>
+                  <button onClick={()=>delTeam(t.id)} style={{background:"#450a0a",border:"none",borderRadius:5,color:"#fca5a5",cursor:"pointer",fontSize:11,padding:"3px 8px"}}>✕</button>
+                </div>
+              ))}
+            </div>
+          </Card>
+          <Card>
+            {!editId?(
+              <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:8,color:"#334155",padding:"2rem 0"}}>
+                <span style={{fontSize:32}}>👈</span>
+                <p style={{fontSize:13,margin:0}}>Select a team to edit</p>
+              </div>
+            ):(
+              <>
+                <SectionLabel>Edit Team</SectionLabel>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:"1rem"}}>
+                  <Avatar name={editName||"?"} color={teams.find(t=>t.id===editId)?.color||"#7c3aed"} size={44}/>
+                  <div>
+                    <p style={{margin:0,fontSize:15,color:"#e2e8f0",fontWeight:700}}>{teams.find(t=>t.id===editId)?.name}</p>
+                    <p style={{margin:0,fontSize:11,color:"#64748b"}}>ID: {editId}</p>
+                  </div>
+                </div>
+                <div style={{display:"grid",gap:10}}>
+                  <div>
+                    <p style={{margin:"0 0 5px",fontSize:11,color:"#64748b",letterSpacing:1}}>TEAM NAME</p>
+                    <Input value={editName} onChange={e=>setEditName(e.target.value)} placeholder="Team name" style={{width:"100%"}}/>
+                  </div>
+                  <div>
+                    <p style={{margin:"0 0 5px",fontSize:11,color:"#64748b",letterSpacing:1}}>TEAM PIN</p>
+                    <Input value={editPin} onChange={e=>setEditPin(e.target.value)} placeholder="Team PIN (min 3 chars)" style={{width:"100%"}}/>
+                    <p style={{margin:"5px 0 0",fontSize:11,color:"#475569"}}>Teams use this PIN to log into their dashboard.</p>
+                  </div>
+                  <div style={{display:"flex",gap:8,marginTop:4}}>
+                    <Btn onClick={saveEdit} color="#14532d" border="#22c55e" textColor="#86efac" style={{flex:1}}>✓ Save Changes</Btn>
+                    <Btn onClick={()=>setEditId(null)} color="#1e293b" border="#334155" style={{flex:1}}>Cancel</Btn>
+                  </div>
+                </div>
+              </>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* ── PINS TAB ── */}
+      {miniTab==="pins"&&(
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.5rem"}}>
+          <div style={{display:"grid",gap:"1rem"}}>
+            <Card>
+              <SectionLabel>Super Admin PIN</SectionLabel>
+              <Input type="password" value={adminPinVal} onChange={e=>setAdminPinVal(e.target.value)} placeholder="New admin PIN" style={{width:"100%",marginBottom:10,boxSizing:"border-box"}}/>
+              {adminMsg&&<p style={{fontSize:12,color:adminMsg.startsWith("✅")?"#86efac":"#fca5a5",margin:"0 0 8px"}}>{adminMsg}</p>}
+              <Btn onClick={saveAdminPin} color="#14532d" border="#22c55e" textColor="#86efac">Update PIN</Btn>
+            </Card>
+            <Card>
+              <SectionLabel>Operator PIN</SectionLabel>
+              <p style={{color:"#64748b",fontSize:13,margin:"0 0 12px"}}>Shared PIN for all operator station logins.</p>
+              <Input type="password" value={opPinVal} onChange={e=>setOpPinVal(e.target.value)} placeholder="New operator PIN" style={{width:"100%",marginBottom:10,boxSizing:"border-box"}}/>
+              {opMsg&&<p style={{fontSize:12,color:opMsg.startsWith("✅")?"#86efac":"#fca5a5",margin:"0 0 8px"}}>{opMsg}</p>}
+              <Btn onClick={saveOpPin} color="#14532d" border="#22c55e" textColor="#86efac">Update PIN</Btn>
+            </Card>
           </div>
-        )}
-      </Card>
+          <div style={{display:"grid",gap:"1rem",alignContent:"start"}}>
+            <Card>
+              <SectionLabel>Display PIN</SectionLabel>
+              <p style={{color:"#64748b",fontSize:13,margin:"0 0 12px"}}>PIN to access the 📺 display/projector screen.</p>
+              <Input type="password" value={dispPinVal} onChange={e=>setDispPinVal(e.target.value)} placeholder="New display PIN" style={{width:"100%",marginBottom:10,boxSizing:"border-box"}}/>
+              {dispMsg&&<p style={{fontSize:12,color:dispMsg.startsWith("✅")?"#86efac":"#fca5a5",margin:"0 0 8px"}}>{dispMsg}</p>}
+              <Btn onClick={saveDispPin} color="#14532d" border="#22c55e" textColor="#86efac">Update PIN</Btn>
+            </Card>
+            <Card>
+              <SectionLabel>Initial Team Balance</SectionLabel>
+              <p style={{color:"#64748b",fontSize:13,margin:"0 0 12px"}}>Cash each team starts with on reset or when added.</p>
+              <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10}}>
+                <span style={{color:"#64748b",fontSize:16}}>🪙</span>
+                <Input type="number" value={balVal} onChange={e=>setBalVal(e.target.value)} style={{width:120,textAlign:"center"}}/>
+              </div>
+              {balMsg&&<p style={{fontSize:12,color:balMsg.startsWith("✅")?"#86efac":"#fca5a5",margin:"0 0 8px"}}>{balMsg}</p>}
+              <Btn onClick={saveBalance} color="#14532d" border="#22c55e" textColor="#86efac">Save Balance</Btn>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* ── RESET GAME TAB ── */}
+      {miniTab==="reset"&&(
+        <Card style={{border:"1px solid #991b1b",maxWidth:520}}>
+          <SectionLabel>Reset Game</SectionLabel>
+          <p style={{color:"#64748b",fontSize:13,margin:"0 0 16px"}}>Resets all teams to initial balance, clears all holdings, transactions, and round history. Commodity prices return to base. Scenarios and team PINs are preserved. This is irreversible.</p>
+          {!resetConfirm?(
+            <Btn onClick={()=>setResetConfirm(true)} color="#450a0a" border="#dc2626" textColor="#fca5a5" style={{width:"100%",padding:"10px"}}>⚠ Reset Entire Game</Btn>
+          ):(
+            <div>
+              <p style={{color:"#fca5a5",fontSize:13,margin:"0 0 10px",fontWeight:700}}>Type <span style={{color:"#ef4444",letterSpacing:2}}>RESET</span> to confirm:</p>
+              <Input value={resetInput} onChange={e=>setResetInput(e.target.value)} placeholder="Type RESET" style={{width:"100%",marginBottom:10,boxSizing:"border-box",border:"1px solid #991b1b",textAlign:"center",letterSpacing:3,textTransform:"uppercase"}}/>
+              <div style={{display:"flex",gap:6}}>
+                <Btn onClick={handleReset} disabled={resetInput!=="RESET"} color="#450a0a" border="#dc2626" textColor="#fca5a5" style={{flex:1,padding:"9px"}}>⚠ Confirm Reset</Btn>
+                <Btn onClick={()=>{setResetConfirm(false);setResetInput("");}} color="#1e293b" border="#334155" style={{flex:1,padding:"9px"}}>Cancel</Btn>
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 }
@@ -1110,14 +1257,16 @@ function TeamPortal({teams,commodities,activeScenario,round,tradingOpen,sorted,o
                   const hist=priceHistory[c.id]||[];
                   const prev=hist.length>=2?hist[hist.length-2]:null;
                   const diff=prev!=null?c.price-prev:null;
+                  const bg=diff==null||diff===0?"#0f172a":diff>0?"#052e16":"#450a0a";
+                  const borderColor=diff==null||diff===0?`${c.color}22`:diff>0?"#166534":"#991b1b";
                   return(
-                    <div key={c.id} style={{background:"#0f172a",borderRadius:8,padding:"10px 8px",textAlign:"center",border:`1px solid ${c.color}22`}}>
+                    <div key={c.id} style={{background:bg,borderRadius:8,padding:"10px 8px",textAlign:"center",border:`1px solid ${borderColor}`,transition:"background .4s,border .4s"}}>
                       <div style={{fontSize:20,marginBottom:2}}>{c.icon}</div>
-                      <div style={{fontSize:11,color:"#64748b",marginBottom:4}}>{c.name}</div>
+                      <div style={{fontSize:11,color:"#94a3b8",marginBottom:4}}>{c.name}</div>
                       <div style={{fontSize:15,fontWeight:700,color:c.color}}>🪙 {c.price.toLocaleString()}</div>
                       {diff!=null&&(
-                        <div style={{fontSize:11,marginTop:3,color:diff>0?"#22c55e":diff<0?"#ef4444":"#64748b",fontWeight:600}}>
-                          {diff>0?"▲":diff<0?"▼":"●"} {diff>0?"+":""}{diff}
+                        <div style={{fontSize:12,marginTop:4,color:diff>0?"#22c55e":diff<0?"#ef4444":"#64748b",fontWeight:700}}>
+                          {diff>0?"▲":diff<0?"▼":"●"} {diff>0?"+":""}{diff.toLocaleString()}
                         </div>
                       )}
                     </div>
